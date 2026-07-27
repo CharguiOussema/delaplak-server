@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+*.log
+uploads/products/*
+!uploads/products/.gitkeep
+uploads/invoices/*
+!uploads/invoices/.gitkeep
+coverage
