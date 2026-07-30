@@ -54,7 +54,7 @@ function renderTemplate(templateName: string, lang: LANGUAGES, data: Record<stri
   return compiled(data);
 }
 
-export type MailTemplate = 'welcome' | 'orderCreated' | 'orderConfirmed';
+export type MailTemplate = 'welcome' | 'orderCreated' | 'orderConfirmed' | 'orderCancelled';
 
 export interface SendTemplateEmailArgs {
   to: string;
@@ -117,6 +117,9 @@ export const mailerService = {
   },
   sendOrderConfirmedEmail(to: string, lang: LANGUAGES | string, data: Record<string, unknown>) {
     return sendTemplateEmail({ to, subject: 'Your DeLAPLAK order has been confirmed', template: 'orderConfirmed', lang, data });
+  },
+  sendOrderCancelledEmail(to: string, lang: LANGUAGES | string, data: Record<string, unknown>) {
+    return sendTemplateEmail({ to, subject: 'Your DeLAPLAK order has been cancelled', template: 'orderCancelled', lang, data });
   },
   sendPasswordResetEmail(to: string, resetUrl: string) {
     const html = `<p>You requested a password reset.</p><p><a href="${resetUrl}">Click here to reset your password</a> (valid for 1 hour).</p><p>If you did not request this, you can safely ignore this email.</p>`;

@@ -1,22 +1,26 @@
 import { productRepository, categoryRepository } from '../repositories';
 import { NotFoundError, BadRequestError } from '../errors';
-import { paginate, escapeRegex } from '../helpers';
+import { paginate, escapeRegex, resolveI18nText } from '../helpers';
 import { UserDocument } from '../models/user.model';
 import { ProductModel } from '../models/product.model';
 import { CreateProductDto, UpdateProductDto } from '../types-server/product';
 import { deleteProductImageFile } from './upload.service';
 
-async function assertCategoryExists(categoryId: string) {
-  const category = await categoryRepository.getOne({ _id: categoryId, isDeleted: false });
-  if (!category) {
-    throw new NotFoundError('Category not found', 'product.service.assertCategoryExists');
+async function assertCategoriesExist(categoryIds: string[]) {
+  const count = await categoryRepository.countDocuments({ _id: { $in: categoryIds }, isDeleted: false });
+  if (count !== categoryIds.length) {
+    throw new NotFoundError('One or more categories not found', 'product.service.assertCategoriesExist');
   }
 }
 
 export async function create({ payload, currentUser }: { payload: CreateProductDto; currentUser: UserDocument }) {
-  await assertCategoryExists(payload.category);
+  await assertCategoriesExist(payload.categories);
+  const name = resolveI18nText(payload.name, 'name');
+  const description = resolveI18nText(payload.description, 'description');
   return productRepository.create({
     ...payload,
+    name,
+    description,
     images: [],
     stock: payload.stock ?? 0,
     createdBy: currentUser._id,
@@ -36,16 +40,16 @@ export async function getAll({
   category?: string;
 }) {
   const filter: Record<string, any> = { isDeleted: false };
-  if (category) filter.category = category;
+  if (category) filter.categories = category;
   if (search) {
     const regex = new RegExp(escapeRegex(search), 'i');
     filter.$or = [{ 'name.en': regex }, { 'name.fr': regex }, { 'name.ar': regex }, { texture: regex }];
   }
-  return paginate(ProductModel, filter, { page, limit, populate: 'category' });
+  return paginate(ProductModel, filter, { page, limit, populate: 'categories' });
 }
 
 export async function getById(id: string) {
-  const product = await productRepository.getOne({ _id: id, isDeleted: false }).populate('category');
+  const product = await productRepository.getOne({ _id: id, isDeleted: false }).populate('categories');
   if (!product) {
     throw new NotFoundError('Product not found', 'product.service.getById');
   }
@@ -58,11 +62,15 @@ export async function update({ id, payload, currentUser }: { id: string; payload
     throw new NotFoundError('Product not found', 'product.service.update');
   }
 
-  if (payload.category) {
-    await assertCategoryExists(payload.category);
+  if (payload.categories) {
+    await assertCategoriesExist(payload.categories);
   }
 
-  Object.assign(product, payload, { updatedBy: currentUser._id });
+  const resolvedPayload: Record<string, any> = { ...payload };
+  if (payload.name) resolvedPayload.name = resolveI18nText(payload.name, 'name');
+  if (payload.description) resolvedPayload.description = resolveI18nText(payload.description, 'description');
+
+  Object.assign(product, resolvedPayload, { updatedBy: currentUser._id });
   await product.save();
   return product;
 }

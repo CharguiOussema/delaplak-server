@@ -1,8 +1,9 @@
 import { categoryRepository } from '../repositories';
-import { NotFoundError, DuplicatedError } from '../errors';
-import { paginate, escapeRegex, slugify } from '../helpers';
+import { NotFoundError, DuplicatedError, BadRequestError } from '../errors';
+import { paginate, escapeRegex, slugify, resolveI18nText } from '../helpers';
 import { UserDocument } from '../models/user.model';
 import { CategoryModel, CategoryDocument } from '../models/category.model';
+import { ProductModel } from '../models/product.model';
 import { CreateCategoryDto, UpdateCategoryDto } from '../types-server/category';
 
 async function generateUniqueSlug(nameEn: string, excludeId?: string): Promise<string> {
@@ -24,9 +25,12 @@ export async function create({ payload, currentUser }: { payload: CreateCategory
     }
   }
 
-  const slug = await generateUniqueSlug(payload.name.en);
+  const name = resolveI18nText(payload.name, 'name');
+  const description = payload.description ? resolveI18nText(payload.description, 'description') : null;
+  const slug = await generateUniqueSlug(name.en);
   return categoryRepository.create({
-    name: payload.name,
+    name,
+    description,
     slug,
     parent: payload.parent || null,
     createdBy: currentUser._id,
@@ -62,8 +66,12 @@ export async function update({ id, payload, currentUser }: { id: string; payload
   }
 
   if (payload.name) {
-    category.name = payload.name;
-    category.slug = await generateUniqueSlug(payload.name.en, String(category._id));
+    category.name = resolveI18nText(payload.name, 'name');
+    category.slug = await generateUniqueSlug(category.name.en, String(category._id));
+  }
+
+  if (payload.description) {
+    category.description = resolveI18nText(payload.description, 'description');
   }
 
   category.updatedBy = currentUser._id;
@@ -73,6 +81,15 @@ export async function update({ id, payload, currentUser }: { id: string; payload
 
 export async function remove(id: string) {
   const category = await getById(id);
+
+  const referencingProducts = await ProductModel.countDocuments({ categories: category._id, isDeleted: false });
+  if (referencingProducts > 0) {
+    throw new BadRequestError(
+      `Cannot delete category: ${referencingProducts} product(s) still reference it`,
+      'category.service.remove',
+    );
+  }
+
   category.isDeleted = true;
   await category.save();
   return category;

@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import multer from 'multer';
 import { ENV } from '../config';
+import { BadRequestError } from '../errors';
 
 const PRODUCTS_DIR = path.join(process.cwd(), ENV.UPLOAD_DIR, 'products');
 
@@ -25,14 +26,15 @@ const storage = multer.diskStorage({
   },
 });
 
-const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+// HEIC/HEIF included since it's the default photo format on iOS.
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']);
 
 export const productImageUpload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024, files: 10 },
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      cb(new Error('Only image files (jpeg/png/webp/gif) are allowed'));
+      cb(new BadRequestError('Only image files (jpeg/png/webp/gif/heic) are allowed', 'upload.service.fileFilter'));
       return;
     }
     cb(null, true);

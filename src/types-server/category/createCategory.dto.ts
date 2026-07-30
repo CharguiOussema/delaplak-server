@@ -10,6 +10,12 @@ export class CreateCategoryDto {
 
   @Expose()
   @IsOptional()
+  @ValidateNested()
+  @Type(() => I18nTextDto)
+  description?: I18nTextDto;
+
+  @Expose()
+  @IsOptional()
   @IsMongoId()
   parent?: string;
 }

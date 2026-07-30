@@ -59,12 +59,14 @@ async function seedProduct(data: {
   texture: string;
   images: string[];
 }) {
+  const { category, ...rest } = data;
   const product = await ProductModel.findOneAndUpdate(
     { 'name.en': data.name.en },
     {
       $setOnInsert: {
-        ...data,
-        currency: 'MAD',
+        ...rest,
+        categories: [category],
+        currency: 'TND',
         dimensions: '2.6m x 0.25m',
         thickness: '8mm',
         applicationDomains: ['habitat', 'offices'],

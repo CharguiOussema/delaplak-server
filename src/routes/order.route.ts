@@ -12,6 +12,9 @@ const CLIENT_ONLY = [USER_ROLES.CLIENT];
 const ADMIN_ONLY = [USER_ROLES.ADMIN];
 // GET routes are readable by CLIENT (own orders only, enforced in the service) and ADMIN (all orders).
 const READ_ROLES = [USER_ROLES.ADMIN, USER_ROLES.CLIENT];
+// Cancel is readable by both: ADMIN can cancel any pending order, a CLIENT only their own
+// (ownership enforced in order.service.ts, same pattern as getById).
+const CANCEL_ROLES = [USER_ROLES.ADMIN, USER_ROLES.CLIENT];
 
 orderRouter.use(validateToken);
 
@@ -23,12 +26,20 @@ orderRouter.get(
   ValidatorMiddleware.validateParams(IdParamDto),
   orderController.getById,
 );
-// Order confirmation is ADMIN-only per the task's permission matrix.
+// Confirmation is ADMIN-only (needs staff verification). Cancellation is ADMIN-or-owner
+// (a client can back out of their own order before it's confirmed). Both are one-way:
+// once an order leaves PENDING, neither route accepts it again (enforced in order.service.ts).
 orderRouter.patch(
   '/:id/confirm',
   AccessTokenValidator.hasRole(ADMIN_ONLY),
   ValidatorMiddleware.validateParams(IdParamDto),
   orderController.confirm,
+);
+orderRouter.patch(
+  '/:id/cancel',
+  AccessTokenValidator.hasRole(CANCEL_ROLES),
+  ValidatorMiddleware.validateParams(IdParamDto),
+  orderController.cancel,
 );
 
 export default orderRouter;

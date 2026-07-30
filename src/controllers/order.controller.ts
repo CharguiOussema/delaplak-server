@@ -24,3 +24,8 @@ export async function confirm(req: RequestWithParamsAndBody<IdParamDto, Record<s
   const result = await orderService.confirm({ id: req.params.id, currentUser: req.currentUser });
   res.status(STATUS_CODE.OK).send(result);
 }
+
+export async function cancel(req: RequestWithParamsAndBody<IdParamDto, Record<string, never>>, res: Response) {
+  const order = await orderService.cancel({ id: req.params.id, currentUser: req.currentUser });
+  res.status(STATUS_CODE.OK).send(order);
+}

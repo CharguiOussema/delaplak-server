@@ -12,6 +12,7 @@ jest.mock('../services/mailer.service', () => ({
     sendWelcomeEmail: jest.fn().mockResolvedValue({ messageId: 'mock' }),
     sendOrderCreatedEmail: jest.fn().mockResolvedValue({ messageId: 'mock' }),
     sendOrderConfirmedEmail: jest.fn().mockResolvedValue({ messageId: 'mock' }),
+    sendOrderCancelledEmail: jest.fn().mockResolvedValue({ messageId: 'mock' }),
     sendPasswordResetEmail: jest.fn().mockResolvedValue({ messageId: 'mock' }),
   },
   sendTemplateEmail: jest.fn().mockResolvedValue({ messageId: 'mock' }),
@@ -47,7 +48,7 @@ describe('Order lifecycle: create -> confirm -> invoice + emails', () => {
         name: { en: 'Oak Panel', fr: 'Panneau chêne', ar: 'لوح البلوط' },
         description: { en: 'desc', fr: 'desc', ar: 'وصف' },
         price: 100,
-        category: categoryRes.body._id,
+        categories: [categoryRes.body._id],
       });
     expect(productRes.status).toBe(200);
     const productId = productRes.body._id;
@@ -113,5 +114,88 @@ describe('Order lifecycle: create -> confirm -> invoice + emails', () => {
     const clientToken = await createUserAndLogin('empty-cart-client@test.com', USER_ROLES.CLIENT);
     const res = await request(app).post('/api/orders').set('Authorization', `Bearer ${clientToken}`).send({});
     expect(res.status).toBe(400);
+  });
+
+  it('cancels a pending order and rejects confirming/cancelling it again', async () => {
+    const adminToken = await createUserAndLogin('cancel-admin@test.com', USER_ROLES.ADMIN);
+    const clientToken = await createUserAndLogin('cancel-client@test.com', USER_ROLES.CLIENT);
+
+    const categoryRes = await request(app)
+      .post('/api/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: { en: 'Marble' } });
+
+    const productRes = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: { en: 'Marble Panel', fr: 'Panneau marbre', ar: 'لوح رخام' },
+        description: { en: 'desc', fr: 'desc', ar: 'وصف' },
+        price: 50,
+        categories: [categoryRes.body._id],
+      });
+
+    await request(app)
+      .post('/api/cart/items')
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ product: productRes.body._id, quantity: 1 });
+
+    const orderRes = await request(app).post('/api/orders').set('Authorization', `Bearer ${clientToken}`).send({});
+
+    // A CLIENT may cancel their own pending order.
+    const cancelRes = await request(app)
+      .patch(`/api/orders/${orderRes.body._id}/cancel`)
+      .set('Authorization', `Bearer ${clientToken}`);
+    expect(cancelRes.status).toBe(200);
+    expect(cancelRes.body.status).toBe('CANCELLED');
+
+    // Once cancelled, the decision is final: neither cancel nor confirm may run again.
+    const cancelAgain = await request(app)
+      .patch(`/api/orders/${orderRes.body._id}/cancel`)
+      .set('Authorization', `Bearer ${clientToken}`);
+    expect(cancelAgain.status).toBe(400);
+
+    const confirmAfterCancel = await request(app)
+      .patch(`/api/orders/${orderRes.body._id}/confirm`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(confirmAfterCancel.status).toBe(400);
+  });
+
+  it('lets ADMIN cancel any order but rejects a CLIENT cancelling someone else\'s', async () => {
+    const adminToken = await createUserAndLogin('cancel-admin2@test.com', USER_ROLES.ADMIN);
+    const ownerToken = await createUserAndLogin('cancel-owner@test.com', USER_ROLES.CLIENT);
+    const otherClientToken = await createUserAndLogin('cancel-other-client@test.com', USER_ROLES.CLIENT);
+
+    const categoryRes = await request(app)
+      .post('/api/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: { en: 'Fabric' } });
+    const productRes = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: { en: 'Linen Panel', fr: 'Panneau lin', ar: 'لوح كتان' },
+        description: { en: 'desc', fr: 'desc', ar: 'وصف' },
+        price: 30,
+        categories: [categoryRes.body._id],
+      });
+    await request(app)
+      .post('/api/cart/items')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ product: productRes.body._id, quantity: 1 });
+    const orderRes = await request(app).post('/api/orders').set('Authorization', `Bearer ${ownerToken}`).send({});
+
+    // A different CLIENT may not cancel someone else's order.
+    const otherCancelAttempt = await request(app)
+      .patch(`/api/orders/${orderRes.body._id}/cancel`)
+      .set('Authorization', `Bearer ${otherClientToken}`);
+    expect(otherCancelAttempt.status).toBe(403);
+
+    // ADMIN may cancel it regardless of ownership.
+    const adminCancelRes = await request(app)
+      .patch(`/api/orders/${orderRes.body._id}/cancel`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(adminCancelRes.status).toBe(200);
+    expect(adminCancelRes.body.status).toBe('CANCELLED');
   });
 });

@@ -9,6 +9,7 @@ export interface I18nText {
 export interface CategoryDocument extends Document {
   _id: Types.ObjectId;
   name: I18nText;
+  description: I18nText | null;
   slug: string;
   parent: Types.ObjectId | null;
   isDeleted: boolean;
@@ -30,6 +31,7 @@ const i18nTextSchema = new Schema<I18nText>(
 const categorySchema = new Schema<CategoryDocument>(
   {
     name: { type: i18nTextSchema, required: true },
+    description: { type: i18nTextSchema, default: null },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     parent: { type: Schema.Types.ObjectId, ref: 'Category', default: null },
     isDeleted: { type: Boolean, default: false },

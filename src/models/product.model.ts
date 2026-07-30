@@ -12,7 +12,7 @@ export interface ProductDocument extends Document {
   thickness: string;
   texture: string;
   applicationDomains: string[];
-  category: Types.ObjectId;
+  categories: Types.ObjectId[];
   stock: number;
   isDeleted: boolean;
   createdBy: Types.ObjectId | null;
@@ -30,19 +30,26 @@ const i18nTextSchema = new Schema<I18nText>(
   { _id: false },
 );
 
-// price.currency defaults to MAD (Moroccan Dirham) since DeLAPLAK is a Morocco-based PVC panel vendor.
+// price.currency defaults to TND (Tunisian Dinar).
 const productSchema = new Schema<ProductDocument>(
   {
     name: { type: i18nTextSchema, required: true },
     description: { type: i18nTextSchema, required: true },
     images: { type: [String], default: [] },
     price: { type: Number, required: true, min: 0 },
-    currency: { type: String, default: 'MAD' },
+    currency: { type: String, default: 'TND' },
     dimensions: { type: String, default: '' },
     thickness: { type: String, default: '' },
     texture: { type: String, default: '' },
     applicationDomains: { type: [String], default: [] },
-    category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
+    categories: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Category' }],
+      required: true,
+      validate: {
+        validator: (v: Types.ObjectId[]) => Array.isArray(v) && v.length > 0,
+        message: 'At least one category is required',
+      },
+    },
     stock: { type: Number, default: 0, min: 0 },
     isDeleted: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
@@ -52,6 +59,6 @@ const productSchema = new Schema<ProductDocument>(
 );
 
 productSchema.index({ 'name.en': 'text', 'name.fr': 'text', 'name.ar': 'text' });
-productSchema.index({ category: 1 });
+productSchema.index({ categories: 1 });
 
 export const ProductModel = mongoose.model<ProductDocument>('Product', productSchema);

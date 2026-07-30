@@ -1,5 +1,5 @@
 import { Expose, Type } from 'class-transformer';
-import { IsArray, IsMongoId, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsMongoId, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { I18nTextDto } from '../category/i18nText.dto';
 
 export class CreateProductDto {
@@ -45,8 +45,10 @@ export class CreateProductDto {
   applicationDomains?: string[];
 
   @Expose()
-  @IsMongoId()
-  category!: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsMongoId({ each: true })
+  categories!: string[];
 
   @Expose()
   @IsOptional()

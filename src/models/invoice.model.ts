@@ -7,6 +7,9 @@ export interface InvoiceLine {
   lineTotal: number;
 }
 
+// Currency is invoice-level, not per-line: an order (and therefore its invoice) always
+// snapshots one currency from checkout, per the single-vendor-cart assumption.
+
 export interface InvoiceDocument extends Document {
   _id: Types.ObjectId;
   order: Types.ObjectId;
@@ -15,6 +18,7 @@ export interface InvoiceDocument extends Document {
   lines: InvoiceLine[];
   subtotal: number;
   total: number;
+  currency: string;
   pdfPath: string;
   issuedAt: Date;
   isDeleted: boolean;
@@ -40,6 +44,7 @@ const invoiceSchema = new Schema<InvoiceDocument>(
     lines: { type: [invoiceLineSchema], default: [] },
     subtotal: { type: Number, required: true },
     total: { type: Number, required: true },
+    currency: { type: String, required: true },
     pdfPath: { type: String, required: true },
     issuedAt: { type: Date, required: true },
     isDeleted: { type: Boolean, default: false },

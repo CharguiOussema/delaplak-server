@@ -12,6 +12,12 @@ export class UpdateCategoryDto {
 
   @Expose()
   @IsOptional()
+  @ValidateNested()
+  @Type(() => I18nTextDto)
+  description?: I18nTextDto;
+
+  @Expose()
+  @IsOptional()
   @IsNullable()
   @IsMongoId()
   parent?: string | null;

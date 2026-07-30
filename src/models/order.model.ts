@@ -6,6 +6,7 @@ export interface OrderItem {
   product: Types.ObjectId;
   name: I18nText;
   price: number;
+  currency: string;
   quantity: number;
 }
 
@@ -14,9 +15,12 @@ export interface OrderDocument extends Document {
   client: Types.ObjectId;
   items: OrderItem[];
   totalAmount: number;
+  currency: string;
   status: ORDER_STATUS;
   confirmedBy: Types.ObjectId | null;
   confirmedAt: Date | null;
+  cancelledBy: Types.ObjectId | null;
+  cancelledAt: Date | null;
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +40,7 @@ const orderItemSchema = new Schema<OrderItem>(
     product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     name: { type: i18nTextSchema, required: true },
     price: { type: Number, required: true },
+    currency: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
   },
   { _id: false },
@@ -46,9 +51,12 @@ const orderSchema = new Schema<OrderDocument>(
     client: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     items: { type: [orderItemSchema], default: [] },
     totalAmount: { type: Number, required: true },
+    currency: { type: String, required: true },
     status: { type: String, enum: Object.values(ORDER_STATUS), default: ORDER_STATUS.PENDING },
     confirmedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     confirmedAt: { type: Date, default: null },
+    cancelledBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    cancelledAt: { type: Date, default: null },
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true },

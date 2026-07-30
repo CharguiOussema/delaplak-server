@@ -1,19 +1,22 @@
 import { Expose } from 'class-transformer';
-import { IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class I18nTextDto {
   @Expose()
+  @IsOptional()
   @IsString()
   @MinLength(1)
-  en!: string;
+  en?: string;
 
   @Expose()
+  @IsOptional()
   @IsString()
   @MinLength(1)
-  fr!: string;
+  fr?: string;
 
   @Expose()
+  @IsOptional()
   @IsString()
   @MinLength(1)
-  ar!: string;
+  ar?: string;
 }

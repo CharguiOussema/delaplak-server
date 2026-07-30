@@ -25,6 +25,7 @@ export async function generateForOrder(order: OrderDocument, clientEmail: string
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
   const total = subtotal;
   const issuedAt = new Date();
+  const currency = order.currency;
 
   const { relativePath } = await generateInvoicePdf({
     number,
@@ -33,6 +34,7 @@ export async function generateForOrder(order: OrderDocument, clientEmail: string
     lines,
     subtotal,
     total,
+    currency,
   });
 
   return invoiceRepository.create({
@@ -42,6 +44,7 @@ export async function generateForOrder(order: OrderDocument, clientEmail: string
     lines,
     subtotal,
     total,
+    currency,
     pdfPath: relativePath,
     issuedAt,
   } as any);
