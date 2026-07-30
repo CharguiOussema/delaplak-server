@@ -1,4 +1,4 @@
-import { orderRepository, userRepository } from '../repositories';
+import { orderRepository, userRepository, productRepository } from '../repositories';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../errors';
 import { paginate } from '../helpers';
 import { OrderModel, OrderItem } from '../models/order.model';
@@ -17,6 +17,15 @@ export async function create({ currentUser }: { currentUser: UserDocument }) {
   const cart = await CartModel.findOne({ client: currentUser._id }).populate('items.product');
   if (!cart || cart.items.length === 0) {
     throw new BadRequestError('Cart is empty', 'order.service.create');
+  }
+
+  for (const item of cart.items as any[]) {
+    if (item.quantity > item.product.stock) {
+      throw new BadRequestError(
+        `Insufficient stock for "${item.product.name.en}": requested ${item.quantity}, available ${item.product.stock}`,
+        'order.service.create',
+      );
+    }
   }
 
   const items: OrderItem[] = cart.items.map((item: any) => ({
@@ -101,8 +110,27 @@ async function getPendingOrderOrThrow(id: string, functionName: string) {
   return order;
 }
 
+// Decrements stock item by item, guarding each write against the stock still being
+// available at that instant (protects against a concurrent order draining it first). If any
+// item runs out, every already-decremented item in this order is put back before failing, so
+// a partially-stocked order never partially reserves inventory.
+async function decrementStockForItems(items: OrderItem[], functionName: string) {
+  const decremented: OrderItem[] = [];
+
+  for (const item of items) {
+    const updated = await productRepository.decrementStock(item.product, item.quantity);
+    if (!updated) {
+      await Promise.all(decremented.map((it) => productRepository.incrementStock(it.product, it.quantity)));
+      throw new BadRequestError(`Insufficient stock for "${item.name.en}"`, functionName);
+    }
+    decremented.push(item);
+  }
+}
+
 export async function confirm({ id, currentUser }: { id: string; currentUser: UserDocument }) {
   const order = await getPendingOrderOrThrow(id, 'order.service.confirm');
+
+  await decrementStockForItems(order.items, 'order.service.confirm');
 
   order.status = ORDER_STATUS.CONFIRMED;
   order.confirmedBy = currentUser._id;
