@@ -1,8 +1,12 @@
 import { Expose } from 'class-transformer';
 import { IsMongoId } from 'class-validator';
 
-export class ProductIdParamDto {
+export class OptionIdParamDto {
   @Expose()
   @IsMongoId()
-  productId!: string;
+  id!: string;
+
+  @Expose()
+  @IsMongoId()
+  optionId!: string;
 }

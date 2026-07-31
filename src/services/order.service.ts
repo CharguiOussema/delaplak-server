@@ -1,7 +1,7 @@
-import { orderRepository, userRepository, productRepository } from '../repositories';
+import { orderRepository, userRepository, productRepository, productAttributeRepository } from '../repositories';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../errors';
-import { paginate } from '../helpers';
-import { OrderModel, OrderItem } from '../models/order.model';
+import { paginate, computeUnitPrice } from '../helpers';
+import { OrderModel, OrderItem, OrderItemSelectedOption } from '../models/order.model';
 import { CartModel } from '../models/cart.model';
 import { UserDocument } from '../models/user.model';
 import { USER_ROLES, ORDER_STATUS } from '../types/consts';
@@ -11,6 +11,29 @@ import { isInTestMode } from '../config';
 
 function isStaff(user: UserDocument) {
   return user.role === USER_ROLES.ADMIN;
+}
+
+// Attribute/option names are frozen onto the order at checkout time (see OrderItemSelectedOption),
+// so a later rename/deletion in Settings never rewrites history for orders already placed.
+async function resolveSelectedOptionSnapshots(cartItems: any[]): Promise<OrderItemSelectedOption[][]> {
+  const attributeIds = [...new Set(cartItems.flatMap((item) => item.selectedOptions.map((s: any) => s.attribute.toString())))];
+  const attributes = await productAttributeRepository.getAll({ _id: { $in: attributeIds }, isDeleted: false });
+  const attributeById = new Map(attributes.map((a) => [a._id.toString(), a]));
+
+  return cartItems.map((item) =>
+    item.selectedOptions.map((selection: any): OrderItemSelectedOption => {
+      const attribute = attributeById.get(selection.attribute.toString());
+      const option = attribute?.options.id(selection.option);
+      const configured = item.product.attributeOptions.find(
+        (entry: any) => entry.attribute.toString() === selection.attribute.toString() && entry.option.toString() === selection.option.toString(),
+      );
+      return {
+        attributeName: attribute?.name ?? { en: 'Unknown', fr: 'Inconnu', ar: 'غير معروف' },
+        optionName: option?.name ?? { en: 'Unknown', fr: 'Inconnu', ar: 'غير معروف' },
+        priceAdjustment: configured?.priceAdjustment ?? 0,
+      };
+    }),
+  );
 }
 
 export async function create({ currentUser }: { currentUser: UserDocument }) {
@@ -28,12 +51,18 @@ export async function create({ currentUser }: { currentUser: UserDocument }) {
     }
   }
 
-  const items: OrderItem[] = cart.items.map((item: any) => ({
+  const selectedOptionSnapshots = await resolveSelectedOptionSnapshots(cart.items as any[]);
+
+  const items: OrderItem[] = cart.items.map((item: any, index: number) => ({
     product: item.product._id,
     name: item.product.name,
-    price: item.product.price,
+    price: computeUnitPrice(
+      item.product,
+      item.selectedOptions.map((s: any) => ({ attribute: s.attribute.toString(), option: s.option.toString() })),
+    ),
     currency: item.product.currency,
     quantity: item.quantity,
+    selectedOptions: selectedOptionSnapshots[index],
   }));
 
   const totalAmount = items.reduce((sum, it) => sum + it.price * it.quantity, 0);

@@ -1,5 +1,6 @@
-import { Expose } from 'class-transformer';
-import { IsInt, IsMongoId, Min } from 'class-validator';
+import { Expose, Type } from 'class-transformer';
+import { IsArray, IsInt, IsMongoId, IsOptional, Min, ValidateNested } from 'class-validator';
+import { SelectedOptionDto } from './selectedOption.dto';
 
 export class AddCartItemDto {
   @Expose()
@@ -10,4 +11,11 @@ export class AddCartItemDto {
   @IsInt()
   @Min(1)
   quantity!: number;
+
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SelectedOptionDto)
+  selectedOptions?: SelectedOptionDto[];
 }

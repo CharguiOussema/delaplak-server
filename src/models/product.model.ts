@@ -1,6 +1,16 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 import { I18nText } from './category.model';
 
+// One entry per attribute option this product offers. `priceAdjustment` is added to (or, if
+// negative, subtracted from) `price` when a client selects `option` for `attribute` — the
+// admin-managed attribute/option vocabulary itself (names only) lives in ProductAttribute;
+// the price impact is product-specific and only ever lives here.
+export interface ProductAttributeSelection {
+  attribute: Types.ObjectId;
+  option: Types.ObjectId;
+  priceAdjustment: number;
+}
+
 export interface ProductDocument extends Document {
   _id: Types.ObjectId;
   name: I18nText;
@@ -8,9 +18,7 @@ export interface ProductDocument extends Document {
   images: string[];
   price: number;
   currency: string;
-  dimensions: string;
-  thickness: string;
-  texture: string;
+  attributeOptions: ProductAttributeSelection[];
   applicationDomains: string[];
   categories: Types.ObjectId[];
   stock: number;
@@ -30,6 +38,15 @@ const i18nTextSchema = new Schema<I18nText>(
   { _id: false },
 );
 
+const productAttributeSelectionSchema = new Schema<ProductAttributeSelection>(
+  {
+    attribute: { type: Schema.Types.ObjectId, ref: 'ProductAttribute', required: true },
+    option: { type: Schema.Types.ObjectId, required: true },
+    priceAdjustment: { type: Number, required: true, default: 0 },
+  },
+  { _id: false },
+);
+
 // price.currency defaults to TND (Tunisian Dinar).
 const productSchema = new Schema<ProductDocument>(
   {
@@ -38,9 +55,7 @@ const productSchema = new Schema<ProductDocument>(
     images: { type: [String], default: [] },
     price: { type: Number, required: true, min: 0 },
     currency: { type: String, default: 'TND' },
-    dimensions: { type: String, default: '' },
-    thickness: { type: String, default: '' },
-    texture: { type: String, default: '' },
+    attributeOptions: { type: [productAttributeSelectionSchema], default: [] },
     applicationDomains: { type: [String], default: [] },
     categories: {
       type: [{ type: Schema.Types.ObjectId, ref: 'Category' }],

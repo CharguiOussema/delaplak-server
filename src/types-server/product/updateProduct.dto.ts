@@ -1,6 +1,7 @@
 import { Expose, Type } from 'class-transformer';
 import { ArrayMinSize, IsArray, IsMongoId, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { I18nTextDto } from '../category/i18nText.dto';
+import { ProductAttributeSelectionDto } from './productAttributeSelection.dto';
 
 export class UpdateProductDto {
   @Expose()
@@ -28,18 +29,10 @@ export class UpdateProductDto {
 
   @Expose()
   @IsOptional()
-  @IsString()
-  dimensions?: string;
-
-  @Expose()
-  @IsOptional()
-  @IsString()
-  thickness?: string;
-
-  @Expose()
-  @IsOptional()
-  @IsString()
-  texture?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductAttributeSelectionDto)
+  attributeOptions?: ProductAttributeSelectionDto[];
 
   @Expose()
   @IsOptional()

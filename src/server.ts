@@ -15,6 +15,7 @@ import {
   userRouter,
   categoryRouter,
   productRouter,
+  productAttributeRouter,
   cartRouter,
   orderRouter,
   invoiceRouter,
@@ -41,6 +42,7 @@ export function createExpressServer() {
   app.use('/api/users', userRouter);
   app.use('/api/categories', categoryRouter);
   app.use('/api/products', productRouter);
+  app.use('/api/product-attributes', productAttributeRouter);
   app.use('/api/cart', cartRouter);
   app.use('/api/orders', orderRouter);
   app.use('/api/invoices', invoiceRouter);

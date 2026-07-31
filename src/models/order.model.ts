@@ -2,12 +2,21 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 import { I18nText } from './category.model';
 import { ORDER_STATUS } from '../types/consts';
 
+// Frozen at order time (attribute/option names, like product `name`, may change or be
+// deleted later — the order must keep showing what the client actually picked and paid for).
+export interface OrderItemSelectedOption {
+  attributeName: I18nText;
+  optionName: I18nText;
+  priceAdjustment: number;
+}
+
 export interface OrderItem {
   product: Types.ObjectId;
   name: I18nText;
   price: number;
   currency: string;
   quantity: number;
+  selectedOptions: OrderItemSelectedOption[];
 }
 
 export interface OrderDocument extends Document {
@@ -35,6 +44,15 @@ const i18nTextSchema = new Schema<I18nText>(
   { _id: false },
 );
 
+const orderItemSelectedOptionSchema = new Schema<OrderItemSelectedOption>(
+  {
+    attributeName: { type: i18nTextSchema, required: true },
+    optionName: { type: i18nTextSchema, required: true },
+    priceAdjustment: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
 const orderItemSchema = new Schema<OrderItem>(
   {
     product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
@@ -42,6 +60,7 @@ const orderItemSchema = new Schema<OrderItem>(
     price: { type: Number, required: true },
     currency: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
+    selectedOptions: { type: [orderItemSelectedOptionSchema], default: [] },
   },
   { _id: false },
 );

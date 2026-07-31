@@ -14,6 +14,7 @@ import { connectToDatabase } from '../config/database';
 import { UserModel } from '../models/user.model';
 import { CategoryModel } from '../models/category.model';
 import { ProductModel } from '../models/product.model';
+import { ProductAttributeModel } from '../models/productAttribute.model';
 import { USER_ROLES } from '../types/consts';
 import { hash } from '../services/bcrypt.service';
 import { slugify } from '../helpers/common.helper';
@@ -51,13 +52,24 @@ async function seedCategory(name: { en: string; fr: string; ar: string }, parent
   return category;
 }
 
+async function seedAttribute(name: { en: string; fr: string; ar: string }, optionNames: { en: string; fr: string; ar: string }[]) {
+  const slug = slugify(name.en);
+  const attribute = await ProductAttributeModel.findOneAndUpdate(
+    { slug },
+    { $setOnInsert: { name, slug, options: optionNames.map((n) => ({ name: n })), isDeleted: false } },
+    { upsert: true, new: true },
+  );
+  console.log(`[seed] Product attribute ready: ${name.en} (${attribute._id})`);
+  return attribute;
+}
+
 async function seedProduct(data: {
   name: { en: string; fr: string; ar: string };
   description: { en: string; fr: string; ar: string };
   price: number;
   category: mongoose.Types.ObjectId;
-  texture: string;
   images: string[];
+  attributeOptions?: { attribute: mongoose.Types.ObjectId; option: mongoose.Types.ObjectId; priceAdjustment: number }[];
 }) {
   const { category, ...rest } = data;
   const product = await ProductModel.findOneAndUpdate(
@@ -67,8 +79,6 @@ async function seedProduct(data: {
         ...rest,
         categories: [category],
         currency: 'TND',
-        dimensions: '2.6m x 0.25m',
-        thickness: '8mm',
         applicationDomains: ['habitat', 'offices'],
         stock: 100,
         isDeleted: false,
@@ -92,6 +102,13 @@ async function main() {
   const fabric = await seedCategory({ en: 'Fabric', fr: 'Tissu', ar: 'قماش' }, textures._id);
   const unicolor = await seedCategory({ en: 'Unicolor', fr: 'Unicolore', ar: 'لون واحد' }, textures._id);
 
+  const finish = await seedAttribute({ en: 'Finish', fr: 'Finition', ar: 'التشطيب' }, [
+    { en: 'Royal Mirror', fr: 'Miroir Royal', ar: 'مرآة ملكية' },
+    { en: 'Celestial Midnight', fr: 'Minuit Céleste', ar: 'منتصف الليل السماوي' },
+    { en: 'Oulan-Bator', fr: 'Oulan-Bator', ar: 'أولان باتور' },
+  ]);
+  const [royalMirror, celestialMidnight, oulanBator] = finish.options;
+
   await seedProduct({
     name: { en: 'Oak Wood Panel', fr: 'Panneau en bois de chêne', ar: 'لوح خشب البلوط' },
     description: {
@@ -101,8 +118,12 @@ async function main() {
     },
     price: 149.9,
     category: wood._id,
-    texture: 'wood',
     images: ['/uploads/products/placeholder-oak-wood.jpg'],
+    attributeOptions: [
+      { attribute: finish._id, option: royalMirror._id, priceAdjustment: 0 },
+      { attribute: finish._id, option: celestialMidnight._id, priceAdjustment: 100 },
+      { attribute: finish._id, option: oulanBator._id, priceAdjustment: -50 },
+    ],
   });
 
   await seedProduct({
@@ -114,7 +135,6 @@ async function main() {
     },
     price: 159.9,
     category: wood._id,
-    texture: 'wood',
     images: ['/uploads/products/placeholder-walnut-wood.jpg'],
   });
 
@@ -127,7 +147,6 @@ async function main() {
     },
     price: 189.9,
     category: marble._id,
-    texture: 'marble',
     images: ['/uploads/products/placeholder-carrara-marble.jpg'],
   });
 
@@ -140,7 +159,6 @@ async function main() {
     },
     price: 199.9,
     category: marble._id,
-    texture: 'marble',
     images: ['/uploads/products/placeholder-black-marble.jpg'],
   });
 
@@ -153,7 +171,6 @@ async function main() {
     },
     price: 169.9,
     category: fabric._id,
-    texture: 'fabric',
     images: ['/uploads/products/placeholder-linen-fabric.jpg'],
   });
 
@@ -166,7 +183,6 @@ async function main() {
     },
     price: 99.9,
     category: unicolor._id,
-    texture: 'unicolor',
     images: ['/uploads/products/placeholder-matte-white.jpg'],
   });
 

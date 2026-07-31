@@ -2,7 +2,7 @@ import { Response } from 'express';
 import * as cartService from '../services/cart.service';
 import { STATUS_CODE } from '../types/consts';
 import { RequestWithBody, RequestWithParamsAndBody } from '../utils/express';
-import { AddCartItemDto, SetCartItemQuantityDto, ProductIdParamDto } from '../types-server/cart';
+import { AddCartItemDto, SetCartItemQuantityDto, CartItemIdParamDto } from '../types-server/cart';
 
 export async function getCart(req: RequestWithBody<Record<string, never>>, res: Response) {
   const cart = await cartService.getCart(req.currentUser._id.toString());
@@ -14,21 +14,22 @@ export async function addItem(req: RequestWithBody<AddCartItemDto>, res: Respons
     clientId: req.currentUser._id.toString(),
     product: req.body.product,
     quantity: req.body.quantity,
+    selectedOptions: req.body.selectedOptions,
   });
   res.status(STATUS_CODE.OK).send(cart);
 }
 
-export async function setItemQuantity(req: RequestWithParamsAndBody<ProductIdParamDto, SetCartItemQuantityDto>, res: Response) {
+export async function setItemQuantity(req: RequestWithParamsAndBody<CartItemIdParamDto, SetCartItemQuantityDto>, res: Response) {
   const cart = await cartService.setItemQuantity({
     clientId: req.currentUser._id.toString(),
-    productId: req.params.productId,
+    itemId: req.params.itemId,
     quantity: req.body.quantity,
   });
   res.status(STATUS_CODE.OK).send(cart);
 }
 
-export async function removeItem(req: RequestWithParamsAndBody<ProductIdParamDto, Record<string, never>>, res: Response) {
-  const cart = await cartService.removeItem({ clientId: req.currentUser._id.toString(), productId: req.params.productId });
+export async function removeItem(req: RequestWithParamsAndBody<CartItemIdParamDto, Record<string, never>>, res: Response) {
+  const cart = await cartService.removeItem({ clientId: req.currentUser._id.toString(), itemId: req.params.itemId });
   res.status(STATUS_CODE.OK).send(cart);
 }
 
