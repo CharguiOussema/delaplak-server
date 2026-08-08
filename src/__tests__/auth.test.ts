@@ -14,12 +14,24 @@ jest.mock('../services/mailer.service', () => ({
 
 const app = createExpressServer();
 
+// Phone is unique per user now, so every signup in this file needs its own number.
+let phoneSeq = 0;
+function signupExtras() {
+  phoneSeq += 1;
+  return { fullName: 'Test Client', phone: `+21260000${String(phoneSeq).padStart(4, '0')}` };
+}
+
 describe('Auth: signup & login', () => {
   it('signs a new CLIENT up and returns an access + refresh token pair', async () => {
-    const res = await request(app).post('/api/auth/signup').send({ email: 'client1@test.com', password: 'Password123!' });
+    const extras = signupExtras();
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({ email: 'client1@test.com', password: 'Password123!', ...extras });
 
     expect(res.status).toBe(200);
     expect(res.body.user.email).toBe('client1@test.com');
+    expect(res.body.user.fullName).toBe(extras.fullName);
+    expect(res.body.user.phone).toBe(extras.phone);
     expect(res.body.user.role).toBe('CLIENT');
     expect(res.body.user.passwordHash).toBeUndefined();
     expect(typeof res.body.accessToken).toBe('string');
@@ -28,13 +40,19 @@ describe('Auth: signup & login', () => {
   });
 
   it('rejects signup with a duplicate email', async () => {
-    await request(app).post('/api/auth/signup').send({ email: 'dupe@test.com', password: 'Password123!' });
-    const res = await request(app).post('/api/auth/signup').send({ email: 'dupe@test.com', password: 'Password123!' });
+    await request(app)
+      .post('/api/auth/signup')
+      .send({ email: 'dupe@test.com', password: 'Password123!', ...signupExtras() });
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({ email: 'dupe@test.com', password: 'Password123!', ...signupExtras() });
     expect(res.status).toBe(409);
   });
 
   it('logs in with correct credentials and rejects wrong ones', async () => {
-    await request(app).post('/api/auth/signup').send({ email: 'client2@test.com', password: 'Password123!' });
+    await request(app)
+      .post('/api/auth/signup')
+      .send({ email: 'client2@test.com', password: 'Password123!', ...signupExtras() });
 
     const good = await request(app).post('/api/auth/login').send({ email: 'client2@test.com', password: 'Password123!' });
     expect(good.status).toBe(200);
@@ -47,7 +65,7 @@ describe('Auth: signup & login', () => {
   it('GET /api/auth/me returns the current authenticated user', async () => {
     const signup = await request(app)
       .post('/api/auth/signup')
-      .send({ email: 'client3@test.com', password: 'Password123!' });
+      .send({ email: 'client3@test.com', password: 'Password123!', ...signupExtras() });
 
     const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${signup.body.accessToken}`);
     expect(me.status).toBe(200);

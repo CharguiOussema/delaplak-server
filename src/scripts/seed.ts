@@ -32,6 +32,8 @@ async function seedAdminUser() {
   const passwordHash = await hash(DEV_PASSWORD);
   const user = await UserModel.create({
     email: DEV_EMAIL,
+    fullName: 'DeLAPLAK Developer',
+    phone: '+212600000000',
     passwordHash,
     role: USER_ROLES.ADMIN,
     isActive: true,

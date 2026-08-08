@@ -29,20 +29,37 @@ async function issueTokenPair(user: UserDocument, family: string): Promise<Token
   return { accessToken, refreshToken: refreshTokenValue, refreshTokenExpiresAt: expiresAt };
 }
 
-export async function signup({ email, password }: { email: string; password: string }) {
+export async function signup({
+  email,
+  password,
+  fullName,
+  phone,
+}: {
+  email: string;
+  password: string;
+  fullName: string;
+  phone: string;
+}) {
   const existing = await userRepository.getOne({ email: email.toLowerCase(), isDeleted: false }).lean();
   if (existing) {
     throw new DuplicatedError('Email already registered', 'auth.service.signup');
   }
 
+  const existingPhone = await userRepository.getOne({ phone, isDeleted: false }).lean();
+  if (existingPhone) {
+    throw new DuplicatedError('Phone number already registered', 'auth.service.signup');
+  }
+
   const passwordHash = await bcryptService.hash(password);
   const user = await userRepository.create({
     email: email.toLowerCase(),
+    fullName,
+    phone,
     passwordHash,
     role: USER_ROLES.CLIENT,
   } as any);
 
-  mailerService.sendWelcomeEmail(user.email, user.preferredLanguage, { name: user.email }).catch((err: unknown) => {
+  mailerService.sendWelcomeEmail(user.email, user.preferredLanguage, { name: user.fullName }).catch((err: unknown) => {
     if (!isInTestMode) console.error('[auth.service] failed to send welcome email', err);
   });
 
@@ -160,7 +177,7 @@ export async function updateProfile({
   payload,
 }: {
   user: UserDocument;
-  payload: { email?: string; preferredLanguage?: string };
+  payload: { email?: string; fullName?: string; phone?: string; preferredLanguage?: string };
 }) {
   const fullUser = await userRepository.getOne({ _id: user._id, isDeleted: false });
   if (!fullUser) {
@@ -175,6 +192,20 @@ export async function updateProfile({
       throw new DuplicatedError('Email already registered', 'auth.service.updateProfile');
     }
     fullUser.email = payload.email.toLowerCase();
+  }
+
+  if (payload.fullName) {
+    fullUser.fullName = payload.fullName;
+  }
+
+  if (payload.phone && payload.phone !== fullUser.phone) {
+    const existingPhone = await userRepository
+      .getOne({ phone: payload.phone, isDeleted: false, _id: { $ne: fullUser._id } })
+      .lean();
+    if (existingPhone) {
+      throw new DuplicatedError('Phone number already registered', 'auth.service.updateProfile');
+    }
+    fullUser.phone = payload.phone;
   }
 
   if (payload.preferredLanguage) {

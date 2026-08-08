@@ -4,6 +4,8 @@ import { USER_ROLES, LANGUAGES } from '../types/consts';
 export interface UserDocument extends Document {
   _id: Types.ObjectId;
   email: string;
+  fullName: string;
+  phone: string;
   passwordHash: string;
   role: USER_ROLES;
   isActive: boolean;
@@ -18,6 +20,8 @@ export interface UserDocument extends Document {
 const userSchema = new Schema<UserDocument>(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    fullName: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, unique: true, trim: true },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: Object.values(USER_ROLES), default: USER_ROLES.CLIENT },
     isActive: { type: Boolean, default: true },

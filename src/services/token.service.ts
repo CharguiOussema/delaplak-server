@@ -58,3 +58,29 @@ export async function validateToken(req: Request, _: Response, next: NextFunctio
     throw new UnauthorizedError('Invalid token', 'token.service validateToken', { user: data });
   }
 }
+
+/**
+ * Optional-auth middleware for public routes (e.g. product/category browsing).
+ * Attaches `req.currentUser` when a valid `Bearer` token is present, but never
+ * rejects the request when the token is missing or invalid — it just proceeds
+ * anonymously so guests can browse the same endpoints as signed-in users.
+ */
+export async function attachUserIfPresent(req: Request, _: Response, next: NextFunction) {
+  const data = req.headers.authorization || '';
+  if (!data.startsWith('Bearer ')) {
+    return next();
+  }
+
+  try {
+    const token = data.split(' ')[1];
+    const payload = jwt.verify(token, ENV.SECRETKEY);
+    const sub = typeof payload === 'string' ? payload : payload.sub;
+    const user = await userRepository.getOne({ _id: sub, isDeleted: false }).lean();
+    if (user && user.isActive) {
+      req.currentUser = user as any;
+    }
+  } catch {
+    // invalid/expired token on a public route: proceed anonymously
+  }
+  next();
+}

@@ -14,8 +14,14 @@ jest.mock('../services/mailer.service', () => ({
 
 const app = createExpressServer();
 
+// Phone is unique per user now, so every signup in this file needs its own number.
+let phoneSeq = 0;
+
 async function signupClient(email: string) {
-  const res = await request(app).post('/api/auth/signup').send({ email, password: 'Password123!' });
+  phoneSeq += 1;
+  const res = await request(app)
+    .post('/api/auth/signup')
+    .send({ email, password: 'Password123!', fullName: 'Test Client', phone: `+21260000${String(phoneSeq).padStart(4, '0')}` });
   return res.body as { accessToken: string; refreshToken: string };
 }
 

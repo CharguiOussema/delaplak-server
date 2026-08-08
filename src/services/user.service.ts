@@ -10,6 +10,8 @@ export async function create({ payload }: { payload: CreateUserDto }) {
   const passwordHash = await bcryptService.hash(payload.password);
   return userRepository.create({
     email: payload.email.toLowerCase(),
+    fullName: payload.fullName,
+    phone: payload.phone,
     passwordHash,
     role: payload.role || USER_ROLES.CLIENT,
   } as any);
@@ -36,6 +38,8 @@ export async function update({ id, payload }: { id: string; payload: UpdateUserD
   const user = await getById({ id });
 
   if (payload.email) user.email = payload.email.toLowerCase();
+  if (payload.fullName) user.fullName = payload.fullName;
+  if (payload.phone) user.phone = payload.phone;
   if (payload.role) user.role = payload.role;
   if (payload.isActive !== undefined) user.isActive = payload.isActive;
 

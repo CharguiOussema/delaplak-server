@@ -2,40 +2,35 @@ import { Router } from 'express';
 import * as productController from '../controllers/product.controller';
 import ValidatorMiddleware from '../middlewares/validators/ValidatorMiddleware';
 import AccessTokenValidator from '../services/accessTokenValidator.service';
-import { validateToken } from '../services/token.service';
+import { attachUserIfPresent, validateToken } from '../services/token.service';
 import { productImageUpload } from '../services/upload.service';
 import { USER_ROLES } from '../types/consts';
 import { CreateProductDto, UpdateProductDto, ProductQueryDto, DeleteProductImageDto } from '../types-server/product';
 import { IdParamDto } from '../types-server/common/idParam.dto';
 
 const productRouter = Router();
-// Per the task's permission matrix: Product CRUD is ADMIN-only, browse is both roles.
-const ALL_ROLES = [USER_ROLES.ADMIN, USER_ROLES.CLIENT];
+// Browsing (list/detail/filter) is public so guests can view the catalog.
+// Product CRUD stays ADMIN-only.
 const WRITE_ROLES = [USER_ROLES.ADMIN];
 
-productRouter.use(validateToken);
-
-productRouter.get('/filter', AccessTokenValidator.hasRole(ALL_ROLES), productController.filter);
-productRouter.get(
-  '/',
-  AccessTokenValidator.hasRole(ALL_ROLES),
-  ValidatorMiddleware.validateQuery(ProductQueryDto),
-  productController.getAll,
-);
+productRouter.get('/filter', attachUserIfPresent, productController.filter);
+productRouter.get('/', attachUserIfPresent, ValidatorMiddleware.validateQuery(ProductQueryDto), productController.getAll);
 productRouter.get(
   '/:id',
-  AccessTokenValidator.hasRole(ALL_ROLES),
+  attachUserIfPresent,
   ValidatorMiddleware.validateParams(IdParamDto),
   productController.getById,
 );
 productRouter.post(
   '/',
+  validateToken,
   AccessTokenValidator.hasRole(WRITE_ROLES),
   ValidatorMiddleware.validateBody(CreateProductDto),
   productController.create,
 );
 productRouter.patch(
   '/:id',
+  validateToken,
   AccessTokenValidator.hasRole(WRITE_ROLES),
   ValidatorMiddleware.validateParams(IdParamDto),
   ValidatorMiddleware.validateBody(UpdateProductDto),
@@ -43,6 +38,7 @@ productRouter.patch(
 );
 productRouter.delete(
   '/:id',
+  validateToken,
   AccessTokenValidator.hasRole(WRITE_ROLES),
   ValidatorMiddleware.validateParams(IdParamDto),
   productController.remove,
@@ -50,6 +46,7 @@ productRouter.delete(
 
 productRouter.post(
   '/:id/images',
+  validateToken,
   AccessTokenValidator.hasRole(WRITE_ROLES),
   ValidatorMiddleware.validateParams(IdParamDto),
   productImageUpload.array('images', 10),
@@ -57,6 +54,7 @@ productRouter.post(
 );
 productRouter.delete(
   '/:id/images',
+  validateToken,
   AccessTokenValidator.hasRole(WRITE_ROLES),
   ValidatorMiddleware.validateParams(IdParamDto),
   ValidatorMiddleware.validateBody(DeleteProductImageDto),

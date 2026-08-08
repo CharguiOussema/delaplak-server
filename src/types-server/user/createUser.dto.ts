@@ -1,6 +1,7 @@
 import { Expose } from 'class-transformer';
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 import { USER_ROLES } from '../../types/consts';
+import { PHONE_REGEX } from '../common';
 
 export class CreateUserDto {
   @Expose()
@@ -11,6 +12,16 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   password!: string;
+
+  @Expose()
+  @IsString()
+  @MinLength(2)
+  fullName!: string;
+
+  @Expose()
+  @IsString()
+  @Matches(PHONE_REGEX, { message: 'phone must be a valid phone number' })
+  phone!: string;
 
   @Expose()
   @IsOptional()
