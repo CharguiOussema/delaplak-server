@@ -6,3 +6,4 @@ export * from './productAttribute.model';
 export * from './cart.model';
 export * from './order.model';
 export * from './invoice.model';
+export * from './siteSettings.model';

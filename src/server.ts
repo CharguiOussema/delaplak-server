@@ -19,6 +19,7 @@ import {
   cartRouter,
   orderRouter,
   invoiceRouter,
+  siteSettingsRouter,
 } from './routes';
 
 const MAX_JSON_BODY_SIZE = '10mb';
@@ -46,6 +47,7 @@ export function createExpressServer() {
   app.use('/api/cart', cartRouter);
   app.use('/api/orders', orderRouter);
   app.use('/api/invoices', invoiceRouter);
+  app.use('/api/site-settings', siteSettingsRouter);
 
   app.get('/health', (_req, res) => {
     res.status(200).send('UP');

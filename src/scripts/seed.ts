@@ -4,6 +4,7 @@
  *
  * Seeds:
  *  - Default ADMIN user developer@delaplak.dev / Developer123!
+ *  - Site settings (home page content) singleton, with its built-in default copy
  *  - Category "Textures" (parent) with 4 children: Wood, Marble, Fabric, Unicolor
  *  - 6 demo products spread across those categories
  */
@@ -18,6 +19,7 @@ import { ProductAttributeModel } from '../models/productAttribute.model';
 import { USER_ROLES } from '../types/consts';
 import { hash } from '../services/bcrypt.service';
 import { slugify } from '../helpers/common.helper';
+import { siteSettingsRepository } from '../repositories/siteSettings.repository';
 
 const DEV_EMAIL = 'developer@delaplak.dev';
 const DEV_PASSWORD = 'Developer123!';
@@ -97,6 +99,9 @@ async function main() {
   console.log('[seed] Connected to database');
 
   await seedAdminUser();
+
+  const siteSettings = await siteSettingsRepository.getOrCreate();
+  console.log(`[seed] Site settings ready (${siteSettings._id})`);
 
   const textures = await seedCategory({ en: 'Textures', fr: 'Textures', ar: 'أنسجة' }, null);
   const wood = await seedCategory({ en: 'Wood', fr: 'Bois', ar: 'خشب' }, textures._id);

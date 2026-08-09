@@ -6,3 +6,4 @@ export * from './productAttribute.repository';
 export * from './cart.repository';
 export * from './order.repository';
 export * from './invoice.repository';
+export * from './siteSettings.repository';

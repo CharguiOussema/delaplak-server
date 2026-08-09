@@ -6,3 +6,4 @@ export { default as productAttributeRouter } from './productAttribute.route';
 export { default as cartRouter } from './cart.route';
 export { default as orderRouter } from './order.route';
 export { default as invoiceRouter } from './invoice.route';
+export { default as siteSettingsRouter } from './siteSettings.route';

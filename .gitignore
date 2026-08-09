@@ -6,4 +6,6 @@ uploads/products/*
 !uploads/products/.gitkeep
 uploads/invoices/*
 !uploads/invoices/.gitkeep
+uploads/site-settings/*
+!uploads/site-settings/.gitkeep
 coverage
