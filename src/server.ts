@@ -20,6 +20,7 @@ import {
   orderRouter,
   invoiceRouter,
   siteSettingsRouter,
+  dashboardRouter,
 } from './routes';
 
 const MAX_JSON_BODY_SIZE = '10mb';
@@ -48,6 +49,7 @@ export function createExpressServer() {
   app.use('/api/orders', orderRouter);
   app.use('/api/invoices', invoiceRouter);
   app.use('/api/site-settings', siteSettingsRouter);
+  app.use('/api/dashboard', dashboardRouter);
 
   app.get('/health', (_req, res) => {
     res.status(200).send('UP');

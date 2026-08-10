@@ -12,3 +12,4 @@ export * as cartService from './cart.service';
 export * as orderService from './order.service';
 export * as invoiceService from './invoice.service';
 export * as siteSettingsService from './siteSettings.service';
+export * as dashboardService from './dashboard.service';
